@@ -12,13 +12,19 @@ export complex
 const h_eps* = 1e-20
 
 proc cmplx*[T](x: T): Complex[T] = Complex[T](re: x, im: T(0.0))
+proc cmplx*[T](x: T, eps: T): Complex[T] = Complex[T](re: x, im: T(eps))
 
 proc abs*[T](z: Complex[T]): Complex[T] =
   result = if z.re < 0: Complex[T](re: -z.re, im: -z.im)
            else: z
+# helpers for convenience for floats
+proc `**`*(x, y: float): float = pow(x, y)
+proc `^`*(x, y: float): float = pow(x, y)
 
 proc `<`*[T](z1, z2: Complex[T]): bool = z1.re < z2.re
 proc `==`*[T](z1, z2: Complex[T]): bool = z1.re == z2.re
+proc `**`*[T](z: Complex[T], k: T): Complex[T] = pow(z, k)
+proc `^`*[T](z: Complex[T], k: T): Complex[T] = pow(z, k)
 
 import macros
 macro patchCall*(f, it, by: typed): untyped =
