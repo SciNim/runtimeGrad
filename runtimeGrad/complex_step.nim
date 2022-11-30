@@ -1,6 +1,11 @@
 import std / [math, strutils]
 export math
 
+## This implementation is based on the ideas of the paper:
+## The Complex-Step Derivative Approximation, 2003
+## by Martins, Sturdza, Alonso
+## https://doi.org/10.1145/838250.838251
+
 import std / complex except abs, `==`
 export complex
 
@@ -29,6 +34,7 @@ macro patchCall*(f, it, by: typed): untyped =
 
 template derivative*[T](x: Complex[T], f: typed): T =
   ## Compute complex step derivative approximation:
+  ##
   ## ∂f/∂x = Im[ f(x + ih) ] / h
   ##
   ## `f` must be a function call using the argument `x`.
