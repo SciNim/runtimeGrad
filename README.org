@@ -1,7 +1,7 @@
 * ~runtimeGrad~ - Autodiff experiments
 
-This repository contains (currently) two different implementations for
-automatic differentiation, both being runtime based (in contrast to a
+This repository contains (currently) three different implementations for
+automatic differentiation, all being runtime based (in contrast to a
 CT symbolic differentiation library like [[https://github.com/SciNim][astGrad]] or other hypothetical
 CT based libraries...).
 
@@ -11,7 +11,7 @@ angle of a set of points.
 
 ** ~micrograd~
 
-The first is simply a port of Andrej Karpathy's [[https://github.com/karpathy/micrograd][micrograd]], which is a
+The [[runtimeGrad/micrograd.nim][first]]n is simply a port of Andrej Karpathy's [[https://github.com/karpathy/micrograd][micrograd]], which is a
 library defining a ref type which builds a directed acyclic graph for
 the performed computation of the instance of the type, each time
 including a closure storing the derivative. From the generated graph
@@ -59,13 +59,13 @@ automatically updated to contain the correct gradient ~∂f_∂xi~ afterwards.
 ** ~dual_autograd~
 
 The second is a straight forward implementation of automatic
-differentiation using dual numbers. It is heavily inspired by a [[https://www.youtube.com/watch?v=YQ7RIHMWA88][Julia
-implementation]] of Julius Pfrommer from KIT. We have a type containing
-the primal (the "value" of the normal variable) and its
-derivative. Using operator overloading for this type we can then
-define each operation by its normal math result and its derivative. As
-such, computing any expression automatically yields the derivative in
-forward mode.
+differentiation using dual numbers, [[runtimeGrad/dual_autograd.nim][dual_autograd]]. It is heavily
+inspired by a [[https://www.youtube.com/watch?v=YQ7RIHMWA88][Julia implementation]] of Julius Pfrommer from KIT. We
+have a type containing the primal (the "value" of the normal variable)
+and its derivative. Using operator overloading for this type we can
+then define each operation by its normal math result and its
+derivative. As such, computing any expression automatically yields the
+derivative in forward mode.
 
 As long as the computation is reasonably run in forward mode, this
 implementation is actually rather efficient and should be usable for
