@@ -101,6 +101,52 @@ trivial of course), for a single procedure call we get the derivatives
 to of the function with respect to the argument ~x~ for *both* outputs
 at the same time.
 
+** Complex step derivative approximation
+
+The third implementation is by far the simplest one in terms of code
+size. It make use of the equivalence between a forward pass automatic
+differentiation and an improved version of a finite difference like
+approach to the definition of a derivative (namely based on a Taylor
+expansion) using complex numbers. It is the complex step derivative
+approximation. The implementation here [[runtimeGrad/complex_step.nim][complex_step.nim]] is inspired
+by the paper of Martins, Sturdz and Alonso in 2003 titled:
+
+[[https://doi.org/10.1145/838250.838251]["The Complex-Step Derivative Approximation"]]
+
+It is essentially equivalent to the dual numbers implementation, but
+lifts most of the implementation details from the definition of Nim's
+~Complex~ type. It overrides the behavior of the ~abs~ function and
+adds comparison operators for ~Complex~ numbers, which only compare
+along the real axis.
+
+#+begin_src nim :results raw
+import complex_step, strformat
+
+let z = cmplx(0.5)
+let res = derivative(z, tanh(z))
+
+echo "AD: ∂(tanh(x))/∂x|_{x=0.5} = ", &"{res:.4f}"
+echo "∂(tanh(x))/∂x|_{x=0.5} = [1 / cosh²(x)]_{x=0.5} = ", &"{1.0 / (cosh(0.5)**2):.4f}"
+
+# and the equivalent of `foo` using the `dual_autograd` above:
+# and now for a case where forward pass is more useful:
+proc foo[T](x: T): (T, T) =
+  result = (tanh(x), sinh(x))
+
+let arg = cmplx(0.5, h_eps)
+## Note: currently we don't have a way to make it nice to work with procs returning
+## tuples, so we need to do the "magic" manually:
+let der = foo(arg)
+let ∂f1_∂x = der[0] / h_eps
+let ∂f2_∂x = der[1] / h_eps
+echo ∂f1_∂x.im, " and ", ∂f2_∂x.im
+#+end_src
+
+#+RESULTS:
+AD: ∂(tanh(x))/∂x|_{x=0.5} = 0.7864
+∂(tanh(x))/∂x|_{x=0.5} = [1 / cosh²(x)]_{x=0.5} = 0.7864
+0.7864477329659274 and 1.127625965206381
+
 ** Distinctions between forward and backward passes
 
 Given a multivariate function $f$ mapping from $\mathcal{R}^n ↦
