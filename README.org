@@ -1,0 +1,145 @@
+* ~runtimeGrad~ - Autodiff experiments
+
+This repository contains (currently) two different implementations for
+automatic differentiation, both being runtime based (in contrast to a
+CT symbolic differentiation library like [[https://github.com/SciNim][astGrad]] or other hypothetical
+CT based libraries...).
+
+** ~micrograd~
+
+The first is simply a port of Andrej Karpathy's [[https://github.com/karpathy/micrograd][micrograd]], which is a
+library defining a ref type which builds a directed acyclic graph for
+the performed computation of the instance of the type, each time
+including a closure storing the derivative. From the generated graph
+afterwards we can differentiate in backward mode by traversing the
+graph backwards through the closures. This library was not intended to
+be efficient by Andrej and neither is this one.
+
+I extended this version to include a wide range of trigonometric and
+other functions to make it a bit more useful for optimization problems
+(but likely it will be too slow for real world applications).
+
+#+begin_src nim :results raw
+import micrograd, strformat
+
+let x = initValue(0.5)
+let tn = tanh(x)
+tn.backward()
+echo "AD: ∂(tanh(x))/∂x|_{x=0.5} = ", &"{x.grad:.4f}"
+echo "∂(tanh(x))/∂x|_{x=0.5} = [1 / cosh²(x)]_{x=0.5} = ", &"{1.0 / (cosh(0.5)**2):.4f}"
+
+# and for a use case where the backward mode shines:
+proc bar[T](x1, x2: T): T =
+  result = tanh(x1) + sinh(x2)
+
+let x1 = initValue(0.5)
+let x2 = initValue(1.5)
+let res = bar(x1, x2)
+res.backward()
+echo "AD: ∂f/∂x1|_{x=0.5} = ", &"{x1.grad:.4f}"
+echo "AD: ∂f/∂x2|_{x=1.5} = ", &"{x2.grad:.4f}"
+#+end_src
+
+#+RESULTS:
+AD: ∂(tanh(x))/∂x|_{x=0.5} = 0.7864
+∂(tanh(x))/∂x|_{x=0.5} = [1 / cosh²(x)]_{x=0.5} = 0.7864
+AD: ∂f/∂x1|_{x=0.5} = 0.7864
+AD: ∂f/∂x2|_{x=1.5} = 2.3524
+
+As we can see in the code, after we have computed the result involving
+our ~Values~, we call the ~backward~ procedure. This computes the
+backward pass for with respect to *all inputs*. As everything is a
+~ref object~ the variables ~x1~ and ~x2~ in the second example are
+automatically updated to contain the correct gradient ~∂f_∂xi~ afterwards.
+
+** ~dual_autograd~
+
+The second is a straight forward implementation of automatic
+differentiation using dual numbers. It is heavily inspired by a [[https://www.youtube.com/watch?v=YQ7RIHMWA88][Julia
+implementation]] of Julius Pfrommer from KIT. We have a type containing
+the primal (the "value" of the normal variable) and its
+derivative. Using operator overloading for this type we can then
+define each operation by its normal math result and its derivative. As
+such, computing any expression automatically yields the derivative in
+forward mode.
+
+As long as the computation is reasonably run in forward mode, this
+implementation is actually rather efficient and should be usable for
+practical problems.
+
+The same list of functions with derivatives supported for ~micrograd~
+is also supported for ~dual_autograd~.
+
+#+begin_src nim :results raw
+import dual_autograd, strformat
+
+let arg = D(0.5, 1.0)
+let x = tanh(arg)
+echo "AD: ∂(tanh(x))/∂x|_{x=0.5} = ", &"{x.d:.4f}"
+echo "∂(tanh(x))/∂x|_{x=0.5} = [1 / cosh²(x)]_{x=0.5} = ", &"{1.0 / (cosh(0.5)**2):.4f}"
+
+# and now for a case where forward pass is more useful:
+proc foo[T](x: T): (T, T) =
+  result = (tanh(x), sinh(x))
+
+let ∂fi_∂x = foo(arg)
+echo ∂fi_∂x
+#+end_src
+which outputs:
+#+begin_src 
+AD: ∂(tanh(x))/∂x|_{x=0.5} = 0.7864
+∂(tanh(x))/∂x|_{x=0.5} = [1 / cosh²(x)]_{x=0.5} = 0.7864
+((p: 0.462117, ∂: 0.786448), (p: 0.521095, ∂: 1.12763))
+#+end_src
+
+As we can see in the second function (while the implementation is
+trivial of course), for a single procedure call we get the derivatives
+to of the function with respect to the argument ~x~ for *both* outputs
+at the same time.
+
+** Distinctions between forward and backward passes
+
+Given a multivariate function $f$ mapping from $\mathcal{R}^n ↦
+\mathcal{R}^m$ the Jacobian $J$ is the matrix defined by $(J_{ij}) =
+\left| \frac{∂f_i}{∂x_j} \right|$ where $i$ is the row index and $j$
+the column index.
+
+In forward mode we compute a single *column* of $J$ whereas in
+backward mode it is a single *row* in one pass.
+
+To make it more understandable in code terms:
+
+#+begin_src nim
+proc f(x1, x2, x3, ...: float): (f1, f2, f3, ...) =
+  result = ...
+
+proc forward(f: Function, x1, x2, ...: float, by) 
+proc backward(f: Function, f1, f2, ...: float, by)
+  
+# assuming a hypothetical forward pass autograd, we compute the
+# derivative with respect to *one* input variable, e.g. `x1`   
+let ∂fi_∂x1 = forward(f, x1, x2, ..., by = x1)
+# which returns a vector of _all_ derivatives (∂f1/∂x1, ∂f2/∂x1, ∂f3/∂x1, ...)
+# i.e. the first column of the Jacobian
+
+# whereas in backward mode it would be:
+let ∂f1_∂xi = backward(f, f1, f2, ..., by = f1)
+# which would give use _all_ derivatives (∂f1/∂x1, ∂f1/∂x2, ∂f1/∂x3, ...)
+# i.e. the first row of the Jacobian
+#+end_src
+
+(Note: I need to think about this pseudo notation when I'm less tired
+again. :) )
+
+Because of this the two different modes are useful for different
+purposes. For functions that have more inputs than outputs backward
+passes are very useful, as all derivatives can be computed with
+respect to the output in very few (N = number of output) passes. In
+the inverse case of a few inputs, but many outputs the forward pass is
+more efficient for the same reason.
+
+Backward passes have become so popular ("backpropagation") due to
+neural networks, because of the typical layout of neural networks in
+machine learning. These typically have a _very_ large number of
+inputs, but very few outputs. As such the efficient thing to do is to
+compute the backward pass instead of the forward pass!
