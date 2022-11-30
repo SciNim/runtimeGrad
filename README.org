@@ -5,6 +5,10 @@ automatic differentiation, both being runtime based (in contrast to a
 CT symbolic differentiation library like [[https://github.com/SciNim][astGrad]] or other hypothetical
 CT based libraries...).
 
+See the [[playground.nim]] file for an example use case using gradient
+descent based on either of the two libraries to find the rotation
+angle of a set of points.
+
 ** ~micrograd~
 
 The first is simply a port of Andrej Karpathy's [[https://github.com/karpathy/micrograd][micrograd]], which is a
