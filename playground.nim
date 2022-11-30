@@ -2,12 +2,15 @@ import sequtils, stats
 
 ## Choose eithe Micrograd or Duals to run the code with either module
 const Micrograd {.booldefine.} = false
-const Duals {.booldefine.} = true
+const Duals {.booldefine.} = false
+const Complex {.booldefine.} = true
 
 when Micrograd:
   import micrograd
 when Duals:
   import dual_autograd
+when Complex:
+  import complex_step
 
 const PITCH = 0.055
 proc eccentricity[T](θ: T, c: seq[(int, int)], centerX, centerY: float): T =
@@ -24,6 +27,12 @@ proc eccentricity[T](θ: T, c: seq[(int, int)], centerX, centerY: float): T =
       sum_y  = D(0.0, 0.0)
       sum_x2 = D(0.0, 0.0)
       sum_y2 = D(0.0, 0.0)
+  when Complex:
+    var
+      sum_x  = cmplx(0.0)
+      sum_y  = cmplx(0.0)
+      sum_x2 = cmplx(0.0)
+      sum_y2 = cmplx(0.0)
 
   for i in 0 ..< len(c):
     let
@@ -58,7 +67,6 @@ let (centerX, centerY) = (pixels.mapIt(it[0]).mean, pixels.mapIt(it[1]).mean)
 
 ## Now perform the gradient descent (either using `micrograd` or `dual_autograd`
 when Micrograd:
-  import micrograd
   var θp = 1.1 # pick some starting angle (in radian)
   var θ = initValue(θp) # and create a `Value` from it
   var res = eccentricity(θ, pixels, centerX, centerY) # propagate through eccentricity calculation
@@ -89,8 +97,6 @@ when Micrograd:
 ## returned from the `eccentricity` call, whereas in the above it is the gradient
 ## associated with the input ref object `θ`.
 when Duals:
-  import dual_autograd
-
   var θp = 1.1
   var θ = D(θp, 1.0)
 
@@ -110,3 +116,23 @@ when Duals:
   ##   Final result:
   ##         θ = 1.530111927499925 ε = (p: -1.209781225615810, ∂: -9.800937291611005e-08)
   ##         Expected: θ = 1.530112032335672 ε = -1.209781225615816
+
+when Complex:
+  var θp = 1.1
+  var θ = cmplx(θp)
+
+  var grad = derivative(θ, eccentricity(θ, pixels, centerX, centerY))
+  var i = 0
+  while abs(0.1 * grad) > 1e-8:
+    θp = θp - 0.1 * grad
+    θ = cmplx(θp)
+    grad = derivative(θ, eccentricity(θ, pixels, centerX, centerY))
+    echo "i = ", i, "\n\tθ = ", θ.re, " ε = ", grad
+    inc i
+  echo "Final result:"
+  echo "\tθ = ", θ.re, " ε = ", eccentricity(θ, pixels, centerX, centerY), " grad = ", grad
+  echo "\tExpected: θ = ", rotAngle, " ε = ", ecc
+  ## And the results from the complex step derivative code:
+  ##   Final result:
+  ##           θ = 1.530111927499925 ε = (-1.20978122561581, -0.0) grad = -9.800937292803663e-08
+  ##           Expected: θ = 1.530112032335672 ε = -1.209781225615816
