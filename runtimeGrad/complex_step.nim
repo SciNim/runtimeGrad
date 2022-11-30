@@ -50,7 +50,4 @@ template derivative*[T](x: Complex[T], f: typed): T =
   var mz = x
   mz.im = h_eps # set starting h
   let res = f.patchCall(x, mz)
-  (res / h_eps).im
-
-let z = cmplx(0.5)
-echo derivative(z, tanh(z))
+  (res / T(h_eps)).im
