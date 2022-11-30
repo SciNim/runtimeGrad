@@ -11,7 +11,7 @@ angle of a set of points.
 
 ** ~micrograd~
 
-The [[runtimeGrad/micrograd.nim][first]]n is simply a port of Andrej Karpathy's [[https://github.com/karpathy/micrograd][micrograd]], which is a
+The [[runtimeGrad/micrograd.nim][first]] is simply a port of Andrej Karpathy's [[https://github.com/karpathy/micrograd][micrograd]], which is a
 library defining a ref type which builds a directed acyclic graph for
 the performed computation of the instance of the type, each time
 including a closure storing the derivative. From the generated graph
