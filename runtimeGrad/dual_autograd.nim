@@ -63,6 +63,7 @@ proc abs*(x: Dual): Dual =
   result = if x.p >= 0.0: x else: -x
 
 # Derivative of functions with a scalar argument
+## XXX: do something like `patchCall`!
 template gradient*(f: typed, x: SomeNumber): untyped =
   let w = D(x.float, 1.0) # First derivative dx / dx = 1
   f(w).d
