@@ -1,6 +1,10 @@
 import std / [math, strutils]
 export math
 
+## The ideas here are from a Julia implementation by Julius Pfrommer from KIT
+## for lectures on optimizaton methods:
+## https://www.youtube.com/watch?v=YQ7RIHMWA88
+
 type
   ## A `Dual` contains a primal (the actual value of the variable) and its derivative
   ## By using operator overloading we accumulate the gradient of each operation on
@@ -43,10 +47,6 @@ proc `^`*(x: Dual, k: float): Dual = D(x.p^k,     k*x.p^(k-1)*x.d)
 proc `^`*(x: Dual, k: int): Dual   = `^`(x, float(k))
 proc `**`*[T: SomeNumber](x: Dual, k: T): Dual = `^`(x, float(k))
 proc `+=`*[T](v: var Dual, w: T) = v = v + w
-
-# XXX: should this be for SomeNumber?
-proc toDual*(x: SomeNumber): Dual = initDual(x.float, 0.0)
-
 
 proc pretty*(x: Dual, precision: int): string =
   result = "(p: " & formatBiggestFloat(x.p, precision = precision) &
