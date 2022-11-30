@@ -1,4 +1,4 @@
-import hashes, sets, math, strformat, algorithm
+import hashes, sets, math, strformat, algorithm, strutils
 export math
 
 type
@@ -16,8 +16,10 @@ proc hash*(v: Value): Hash =
   result = result !& hash(v.backFn)
   result = result !& hash(v.prev)
 
-proc `$`*(v: Value): string =
-  result = &"Value(data={v.data}, grad={v.grad})"
+proc pretty*(x: Value, precision: int): string =
+  result = "(p: " & formatBiggestFloat(x.data, precision = precision) &
+    ", ∂: " & formatBiggestFloat(x.grad, precision = precision) & ")"
+proc `$`*(x: Value): string = pretty(x, precision = -1)
 
 proc initValue*[T: SomeNumber](x: T, children = initHashSet[Value](), op = ""): Value =
   result = Value(data: x.float, grad: 0.0, prev: children, op: op,
